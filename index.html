@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f2eee5" />
+    <title>Nine Zeros: from 1 user to 1,000,000,000</title>
+    <meta name="description" content="One slider from 1 user to a billion. Watch a system grow, see what breaks at each size, what it costs, and how real companies did it." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f2eee5'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%2315140f' stroke-width='2.5'/%3E%3Ccircle cx='25' cy='25' r='3' fill='%23d4491a'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="mark" href="./">Nine Zeros<i></i></a>
+      <nav>
+        <button id="btn-assume" class="chip">Assumptions</button>
+        <button id="btn-about" class="chip">About</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="story" aria-live="polite">
+        <p class="eyebrow" id="stage-count">Stage 1 of 7</p>
+        <h1 id="stage-title">One machine</h1>
+        <p class="lede" id="stage-text"></p>
+        <p class="next"><b>Gives way next</b><span id="stage-next"></span></p>
+        <aside id="landmark" hidden>
+          <p class="eyebrow">Someone really did this</p>
+          <p class="lm-head"><span id="lm-name"></span><b id="lm-headline"></b></p>
+          <p id="lm-detail"></p>
+          <p class="src">Source: <a id="lm-source" target="_blank" rel="noopener"></a></p>
+        </aside>
+      </section>
+
+      <section class="stage">
+        <canvas id="diagram" aria-label="A diagram of the system at this size, with traffic flowing through it"></canvas>
+        <div id="strain" hidden>
+          <p class="eyebrow">Frozen at <span id="frozen-at"></span> users</p>
+          <div class="bar"><i id="strain-bar"></i></div>
+          <p id="strain-text"></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="deck">
+      <div class="count">
+        <p class="big"><span id="users">1</span></p>
+        <p class="unit" id="users-unit">person a day</p>
+      </div>
+      <dl class="stats">
+        <div><dt id="s1-k">Requests, busiest second</dt><dd id="s1-v">–</dd></div>
+        <div><dt id="s2-k">Machines</dt><dd id="s2-v">–</dd></div>
+        <div><dt id="s3-k">Cloud bill, a month</dt><dd id="s3-v">–</dd></div>
+        <div><dt id="s4-k">Per user, a month</dt><dd id="s4-v">–</dd></div>
+      </dl>
+      <div class="controls">
+        <button id="btn-play" class="play"><span class="ico"></span><span class="txt">Grow</span></button>
+        <div id="rail" role="slider" tabindex="0" aria-label="Daily users" aria-valuemin="1" aria-valuemax="1000000000">
+          <div class="line"><i id="rail-fill"></i></div>
+          <div id="rail-ticks"></div>
+          <div id="rail-marks"></div>
+          <i id="rail-thumb"></i>
+        </div>
+        <button id="btn-freeze" class="chip freeze" aria-pressed="false" title="Stop adding machines and keep growing, to see what happens">Freeze the system</button>
+      </div>
+    </footer>
+
+    <dialog id="assume">
+      <button class="close" data-close aria-label="Close">×</button>
+      <p class="eyebrow">Assumptions</p>
+      <h2>Every number the model uses. Change any of them.</h2>
+      <p>This is a model built from common rules of thumb, not a quote for your system. If your product is heavier or lighter than these, type your own figures and everything redraws.</p>
+      <form id="assume-form"></form>
+      <h3>Prices</h3>
+      <p>AWS on-demand list prices, US East (N. Virginia), checked 11 November 2026. Real bills at scale are lower: large customers commit ahead and negotiate.</p>
+      <table id="price-table"></table>
+      <p><button type="button" id="assume-reset" class="chip ink">Reset to defaults</button></p>
+    </dialog>
+
+    <dialog id="about">
+      <button class="close" data-close aria-label="Close">×</button>
+      <p class="eyebrow">About</p>
+      <h2>Will it scale, and what will it cost?</h2>
+      <p>Drag from one user to a billion. The diagram is the system a careful team would be running at that size; the orange dots are requests moving through it. Press <b>Freeze the system</b> and keep dragging to see why each new part appears: the queue builds, responses slow, and requests start to fail.</p>
+      <h3>What is real, and what is a model</h3>
+      <ul>
+        <li><b>The model.</b> Machine counts come from the assumptions (how many requests a user makes, how many a server can serve). They are standard rules of thumb, listed and editable under Assumptions.</li>
+        <li><b>The slowdown.</b> Response times under load use the M/M/1 queue: mean time is the service time divided by one minus the load. That is exact for that queue and is why a system at 95 percent is not “nearly fine”.</li>
+        <li><b>The prices</b> are AWS public list prices, linked under Assumptions.</li>
+        <li><b>The companies</b> on the rail are real, placed where their own engineers said they were, each with its source. They often did it with far fewer machines than the rules of thumb suggest. That is the point: architecture and care matter more than the rules.</li>
+      </ul>
+      <h3>Keys</h3>
+      <p class="keys"><kbd>←</kbd><kbd>→</kbd> fewer and more users · <kbd>Shift</kbd> with an arrow jumps a whole zero · <kbd>Space</kbd> grow or pause · <kbd>F</kbd> freeze · <kbd>Esc</kbd> close</p>
+      <p class="by">Made by <a href="https://pratyushshivam.com" target="_blank" rel="noopener">Pratyush Shivam</a>. Typeface: Geist, SIL Open Font License.</p>
+    </dialog>
+
+    <noscript>Nine Zeros needs JavaScript to draw the system.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
