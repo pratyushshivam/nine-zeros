@@ -29,7 +29,7 @@ interface NodeDef {
 const one = (n: number, single: string, many: string) => (n === 1 ? single : many);
 
 const NODES: NodeDef[] = [
-  { id: 'users', x: 0.5, y: 0.035, maxDots: 0, aspect: 1, present: () => true, count: () => 0, label: () => 'People' },
+  { id: 'users', x: 0.5, y: 0.02, maxDots: 0, aspect: 1, present: () => true, count: () => 0, label: () => 'People' },
   { id: 'cdn', x: 0.13, y: 0.215, maxDots: 0, aspect: 1, present: (s) => s.hasCdn, count: () => 0, label: () => 'CDN, near the user' },
   { id: 'lb', x: 0.5, y: 0.215, maxDots: 40, aspect: 8, present: (s) => s.hasLoadBalancer, count: (s) => s.loadBalancers, label: (_s, n) => one(n, 'load balancer', 'load balancers') },
   {
@@ -42,7 +42,7 @@ const NODES: NodeDef[] = [
     id: 'db', x: 0.5, y: 0.775, maxDots: 180, aspect: 6, present: (s) => s.hasSeparateDb, count: (s) => s.dbNodes,
     label: (s, n) => (s.shards > 1 ? `database machines in ${sig(s.shards)} shards` : one(n, 'database', 'database machines')),
   },
-  { id: 'files', x: 0.87, y: 0.86, maxDots: 0, aspect: 1, present: (s) => s.hasObjectStorage, count: () => 0, label: (s) => `${sig(s.storageTb >= 1000 ? s.storageTb / 1000 : s.storageTb, 2)} ${s.storageTb >= 1000 ? 'PB' : 'TB'} of files` },
+  { id: 'files', x: 0.13, y: 0.875, maxDots: 0, aspect: 1, present: (s) => s.hasObjectStorage, count: () => 0, label: (s) => `${sig(s.storageTb >= 1000 ? s.storageTb / 1000 : s.storageTb, 2)} ${s.storageTb >= 1000 ? 'PB' : 'TB'} of files` },
 ];
 
 interface NodeView {
@@ -64,6 +64,8 @@ interface Particle {
   y: number;
   vy: number;
   life: number;
+  px: number;
+  py: number;
 }
 
 function routes(s: System): { path: NodeId[]; w: number }[] {
@@ -96,6 +98,8 @@ export class Diagram {
   private regionAlpha = 0;
   private last = 0;
   private spawnDebt = 0;
+  private crowd: [number, number][] = [];
+  private grid: CanvasPattern | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -103,6 +107,16 @@ export class Diagram {
   ) {
     this.ctx = canvas.getContext('2d')!;
     for (const n of NODES) this.views.set(n.id, { alpha: 0, shown: 1, top: 0, bottom: 0, cx: 0 });
+    // A fixed scatter of people, so the crowd fills in rather than reshuffling.
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    for (let i = 0; i < 1100; i++) this.crowd.push([rnd(), rnd()]);
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 22;
+    const tc = tile.getContext('2d')!;
+    tc.fillStyle = 'rgba(21,20,15,0.13)';
+    tc.fillRect(0, 0, 1.2, 1.2);
+    this.grid = this.ctx.createPattern(tile, 'repeat');
     new ResizeObserver(() => this.resize()).observe(canvas);
     this.resize();
   }
@@ -138,6 +152,10 @@ export class Diagram {
     const { ctx, w, h, sys } = this;
     const ease = (tau: number) => 1 - Math.exp(-dt / tau);
     ctx.clearRect(0, 0, w, h);
+    if (this.grid) {
+      ctx.fillStyle = this.grid;
+      ctx.fillRect(0, 0, w, h);
+    }
     const small = w < 520;
     const cell = Math.max(6, Math.min(11, w / 96));
     const sq = cell * 0.66;
@@ -149,9 +167,10 @@ export class Diagram {
       v.alpha += ((present ? 1 : 0) - v.alpha) * ease(this.reduced ? 0.001 : 0.22);
       const target = Math.max(1, n.count(sys));
       v.shown = Math.exp(Math.log(v.shown) + (Math.log(target) - Math.log(v.shown)) * ease(this.reduced ? 0.001 : 0.16));
-      v.cx = n.x * w;
+      // On a narrow screen the side parts move in so nothing touches the edge.
+      v.cx = (small ? 0.5 + (n.x - 0.5) * 0.74 : n.x) * w;
       v.top = n.y * h;
-      v.bottom = v.top + 30;
+      v.bottom = n.id === 'users' ? h * 0.115 : v.top + 30;
     }
     this.regionAlpha += ((sys.regions > 1 ? 1 : 0) - this.regionAlpha) * ease(0.3);
 
@@ -209,25 +228,54 @@ export class Diagram {
         const b = this.views.get(r.path[i + 1])!;
         ctx.globalAlpha = Math.min(a.alpha, b.alpha) * 0.9;
         ctx.strokeStyle = RULE;
+        const pts = this.line(r.path[i], r.path[i + 1]);
+        ctx.strokeStyle = 'rgba(21,20,15,0.32)';
         ctx.beginPath();
-        const [p0, p1, p2, p3] = this.curve(a, b);
-        ctx.moveTo(p0[0], p0[1]);
-        ctx.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let k = 1; k < pts.length - 1; k++) ctx.arcTo(pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1], 10);
+        ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
         ctx.stroke();
-        if (key === 'app>workers') {
+        if (key === 'app>workers' && pts.length > 2) {
+          ctx.fillStyle = PAPER;
+          const qx = (pts[1][0] + pts[2][0]) / 2;
+          ctx.fillRect(qx - 24, pts[1][1] - 8, 48, 16);
           ctx.fillStyle = MUTE;
-          ctx.font = `500 ${small ? 10 : 11}px ${FONT}`;
+          ctx.font = '500 ' + (small ? 10 : 11) + 'px ' + FONT;
           ctx.textAlign = 'center';
-          const m = this.point(a, b, 0.55);
-          ctx.fillText('queue', m[0] + 22, m[1] - 4);
+          ctx.fillText('queue', qx, pts[1][1] + 4);
         }
       }
     }
     ctx.globalAlpha = 1;
 
+    // ---- the crowd along the top: it fills in as the number grows ----
+    {
+      const u = this.views.get('users')!;
+      const n = Math.round(4 + (this.position / 9) ** 1.6 * (small ? 420 : 1050));
+      ctx.fillStyle = INK;
+      ctx.globalAlpha = 0.5;
+      const bw = w * 0.9;
+      for (let i = 0; i < n && i < this.crowd.length; i++) {
+        const c = this.crowd[i];
+        ctx.fillRect(w * 0.05 + c[0] * bw, u.top + 6 + c[1] * (u.bottom - u.top - 14), 1.8, 1.8);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // ---- requests ----
     this.stepParticles(dt, rs);
     for (const p of this.particles) {
+      if (!p.falling && p.px === p.px && Math.abs(p.px - p.x) + Math.abs(p.py - p.y) < 26) {
+        // A short tail, so the eye reads direction and speed.
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = ACCENT;
+        ctx.lineWidth = small ? 1.4 : 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.px, p.py);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
       ctx.globalAlpha = p.falling ? Math.max(0, p.life) : 0.95;
       ctx.fillStyle = p.falling ? INK : ACCENT;
       ctx.beginPath();
@@ -243,13 +291,14 @@ export class Diagram {
       if (v.alpha < 0.01) continue;
       ctx.globalAlpha = v.alpha;
       const count = Math.round(v.shown);
-      const label = n.label(sys, count);
+      const label = small && n.id === 'cdn' ? 'CDN' : small && n.id === 'cache' ? 'caches' : n.label(sys, count);
       const fs = small ? 11 : 13;
       ctx.textBaseline = 'alphabetic';
       if (n.maxDots === 0) {
         ctx.font = `600 ${fs}px ${FONT}`;
         const tw = ctx.measureText(label).width;
-        if (n.id !== 'users') {
+        if (n.id === 'users') continue;
+        {
           // A plain tag: paper box with an ink edge.
           ctx.fillStyle = PAPER;
           ctx.strokeStyle = INK;
@@ -259,7 +308,7 @@ export class Diagram {
           ctx.fill();
           ctx.stroke();
         }
-        ctx.fillStyle = n.id === 'users' ? MUTE : INK;
+        ctx.fillStyle = INK;
         ctx.textAlign = 'center';
         ctx.fillText(label, v.cx, v.top + 17);
         continue;
@@ -318,22 +367,34 @@ export class Diagram {
     void sq;
   }
 
-  /** The curve from the foot of one node to the head of another. */
-  private curve(a: NodeView, b: NodeView): [number, number][] {
-    const y0 = a.bottom + 4;
-    const y1 = b.top - 8;
-    const mid = (y0 + y1) / 2;
-    return [[a.cx, y0], [a.cx, mid], [b.cx, mid], [b.cx, y1]];
+  /** The right-angled line from the foot of one node to the head of another. */
+  private line(from: NodeId, to: NodeId): [number, number][] {
+    const a = this.views.get(from)!;
+    const b = this.views.get(to)!;
+    const end: [number, number] = [b.cx, b.top - 8];
+    if (from === 'users') return [[b.cx, a.bottom], end];
+    const start: [number, number] = [a.cx, a.bottom + 4];
+    if (Math.abs(a.cx - b.cx) < 2) return [start, end];
+    // Side branches leave on a shared rail just under the app servers; everything bound for
+    // the database or the file store joins a second rail just above the database.
+    const db = this.views.get('db')!;
+    const rail = to === 'cache' || to === 'workers' ? a.bottom + 20 : db.top - 20;
+    return [start, [a.cx, rail], [b.cx, rail], end];
   }
 
-  private point(a: NodeView, b: NodeView, t: number): [number, number] {
-    const [p0, p1, p2, p3] = this.curve(a, b);
-    const u = 1 - t;
-    const k0 = u * u * u;
-    const k1 = 3 * u * u * t;
-    const k2 = 3 * u * t * t;
-    const k3 = t * t * t;
-    return [k0 * p0[0] + k1 * p1[0] + k2 * p2[0] + k3 * p3[0], k0 * p0[1] + k1 * p1[1] + k2 * p2[1] + k3 * p3[1]];
+  private along(pts: [number, number][], t: number): [number, number] {
+    let total = 0;
+    for (let k = 1; k < pts.length; k++) total += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+    let d = t * total;
+    for (let k = 1; k < pts.length; k++) {
+      const seg = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+      if (d <= seg || k === pts.length - 1) {
+        const f = seg ? Math.min(1, d / seg) : 0;
+        return [pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f];
+      }
+      d -= seg;
+    }
+    return pts[pts.length - 1];
   }
 
   private stepParticles(dt: number, rs: { path: NodeId[]; w: number }[]): void {
@@ -360,7 +421,7 @@ export class Diagram {
       }
       this.particles.push({
         path: route.path, seg: 0, t: Math.random() * 0.2, speed: 0.75 + Math.random() * 0.5,
-        off: Math.random() - 0.5, falling: false, x: 0, y: 0, vy: 0, life: 1,
+        off: Math.random() - 0.5, falling: false, x: 0, y: 0, vy: 0, life: 1, px: NaN, py: NaN,
       });
     }
     const spread = Math.min(this.w * 0.36, 300);
@@ -378,7 +439,7 @@ export class Diagram {
       const b = this.views.get(p.path[p.seg + 1])!;
       if (b.alpha < 0.3) continue; // that part of the system no longer exists
       const beforeApp = p.path.indexOf('app') > p.seg;
-      const len = Math.hypot(b.cx - a.cx, b.top - a.bottom) + 40;
+      const len = Math.abs(b.cx - a.cx) + Math.abs(b.top - a.bottom) + 30;
       p.t += (dt * 230 * p.speed * (beforeApp ? slow : 1)) / len;
       if (p.t >= 1) {
         p.seg++;
@@ -390,19 +451,19 @@ export class Diagram {
           p.vy = -120 - Math.random() * 120;
           p.x = b.cx + p.off * spread * 0.5;
           p.y = b.top - 6;
+          p.px = NaN;
           keep.push(p);
           continue;
         }
         if (p.seg >= p.path.length - 1) continue;
       }
-      const from = this.views.get(p.path[p.seg])!;
-      const to = this.views.get(p.path[p.seg + 1])!;
-      const pt = this.point(from, to, p.t);
+      const pt = this.along(this.line(p.path[p.seg], p.path[p.seg + 1]), p.t);
       // People are spread along the top; streams narrow as they join the system.
-      const fan = p.seg === 0 ? (1 - p.t) * (1 - p.t) * spread * 2 : 0;
-      pt[0] += p.off * (fan + 7);
-      p.x = pt[0];
-      p.y = pt[1];
+      const fan = p.seg === 0 ? (1 - p.t) ** 3 * spread * 2.4 : 0;
+      p.px = p.t === 0 ? NaN : p.x;
+      p.py = p.y;
+      p.x = pt[0] + p.off * (fan + 6);
+      p.y = pt[1] + (p.seg > 0 ? p.off * 3 : 0);
       keep.push(p);
     }
     this.particles = keep.length > wanted * 1.6 ? keep.slice(keep.length - Math.ceil(wanted * 1.6)) : keep;

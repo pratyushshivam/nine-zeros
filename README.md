@@ -31,7 +31,11 @@ Real companies are pinned along the way, each from what its own engineers publis
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="assets/screens/instagram.jpg" width="100%" alt="At 14 million users, a card reads: Instagram, December 2011, 3 engineers"><br><sub><b>Someone really did this.</b> Instagram at 14 million users: three engineers.</sub></td>
+<td width="50%" valign="top"><img src="assets/screens/stack-overflow.jpg" width="100%" alt="At 4.2 million users, a card reads: Stack Overflow, 2016, 9 web servers"><br><sub><b>And this.</b> Stack Overflow on 9 web servers, where the rules of thumb say 35 machines.</sub></td>
+</tr>
+<tr>
 <td width="50%" valign="top"><img src="assets/screens/frozen-failing.jpg" width="100%" alt="A system frozen at 100,000 users, now facing 3.2 million: the app servers are orange, requests pile up and fall away, 75 percent failing"><br><sub><b>Frozen.</b> Stop adding machines and keep growing: 397% load, three requests in four fail.</sub></td>
+<td width="50%" valign="top"><img src="assets/screens/assumptions.jpg" width="100%" alt="The assumptions panel: sixteen editable numbers such as requests per user a day and requests a second per app server"><br><sub><b>Nothing hidden.</b> Sixteen assumptions, all editable. Change one and everything redraws.</sub></td>
 </tr>
 </table>
 
@@ -55,6 +59,11 @@ Real companies are pinned along the way, each from what its own engineers publis
 
 ## The seven stages
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/stages-dark.svg">
+  <img src="assets/stages-light.svg" width="100%" alt="The seven stages on a log axis from 1 to 1 billion users: one machine at 1, the database moves out at 1,000, two of everything in front at 10,000, stop asking the database at 100,000, do it later at 1 million, split the data at 10 million, everywhere at once at 100 million. Stack Overflow, Instagram and WhatsApp are marked where they really were.">
+</picture>
+
 | Users | What changes | Why |
 | :-- | :-- | :-- |
 | **1** | One machine | The app and the database share a small server |
@@ -69,7 +78,23 @@ Real companies are pinned along the way, each from what its own engineers publis
 
 Press **Freeze the system** at any size and keep dragging. The diagram stops growing and the readout switches to what users would feel: load, typical response time, the slowest one in a hundred, and the share of requests failing.
 
+<img src="assets/freeze.gif" width="100%" alt="A system frozen at 100,000 users while the slider is dragged to 3 million: the app servers turn orange, requests pile up above them and fall away, and the readout climbs from 98 percent load to 397 percent with 75 percent of requests failing">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/queue-dark.svg">
+  <img src="assets/queue-light.svg" width="100%" alt="Response time against how busy the servers are: flat until about half, then climbing steeply. At 50 percent busy a request takes twice as long, at 90 percent ten times, at 98 percent fifty times, and at 100 percent it never finishes.">
+</picture>
+
 This is the part worth showing a non-engineer. Response time does not rise in step with load. In the M/M/1 queue, the mean response is the service time divided by one minus the load, so a server at 50% takes twice as long as an idle one, at 90% ten times, at 98% fifty times, and past 100% the queue never empties. A system at 95% is not "nearly fine". It is one busy afternoon from down.
+
+## The bill
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/bill-dark.svg">
+  <img src="assets/bill-light.svg" width="100%" alt="The monthly bill at each power of ten, from 12 dollars at one user to 5.27 million at a billion, split into servers, database, cache, storage and data sent to users. Cost per user falls from 12 dollars to about half a cent.">
+</picture>
+
+Two things surprise people. The cost per user collapses, from $12 for the first user to about half a cent each from a million onwards. And once the system is large, the biggest line is not servers at all: it is the price of sending data to users, which no amount of clever architecture removes. At list prices, anyway. That line is the first thing a large customer negotiates.
 
 ## The model
 
@@ -113,7 +138,7 @@ npm run dev
 | `npm run build` | Static site in `dist/`, ready for any static host |
 | `npm test` | Unit tests for the model |
 | `npm run typecheck` | TypeScript, no emit |
-| `npm run readme` | Rebuilds the title graphic from the model |
+| `npm run readme` | Rebuilds the graphics on this page from the model |
 
 Keyboard: `←` `→` fewer and more users, `Shift` with an arrow jumps a whole zero, `Space` grows or pauses, `F` freezes. Add `?at=6` to the address to open at a million.
 
@@ -121,4 +146,4 @@ Keyboard: `←` `→` fewer and more users, `Shift` with an arrow jumps a whole 
 
 [MIT](LICENSE). The Geist typeface is used under the SIL Open Font License.
 
-<p align="center"><sub>Built by <a href="https://www.pratyushshivam.com/">Pratyush Shivam</a>. The bars in the title graphic are computed from the same model the app runs on, and follow your light or dark theme.</sub></p>
+<p align="center"><sub>Built by <a href="https://www.pratyushshivam.com/">Pratyush Shivam</a>. The graphics on this page are hand-built SVG with CSS animation, computed from the same model the app runs on. They follow your light or dark theme.</sub></p>
