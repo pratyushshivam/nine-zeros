@@ -31,7 +31,7 @@ Real companies are pinned along the way, each from what its own engineers publis
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="assets/screens/instagram.jpg" width="100%" alt="At 14 million users, a card reads: Instagram, December 2011, 3 engineers"><br><sub><b>Someone really did this.</b> Instagram at 14 million users: three engineers.</sub></td>
-<td width="50%" valign="top"><img src="assets/screens/stack-overflow.jpg" width="100%" alt="At 4.2 million users, a card reads: Stack Overflow, 2016, 9 web servers"><br><sub><b>And this.</b> Stack Overflow on 9 web servers, where the rules of thumb say 35 machines.</sub></td>
+<td width="50%" valign="top"><img src="assets/screens/stack-overflow.jpg" width="100%" alt="At 4.2 million users, a card reads: Stack Overflow, 2016, 9 web servers"><br><sub><b>And this.</b> Stack Overflow on 9 web servers, where the rules of thumb say about 35 machines.</sub></td>
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="assets/screens/frozen-failing.jpg" width="100%" alt="A system frozen at 100,000 users, now facing 3.2 million: the app servers are orange, requests pile up and fall away, 75 percent failing"><br><sub><b>Frozen.</b> Stop adding machines and keep growing: 397% load, three requests in four fail.</sub></td>
